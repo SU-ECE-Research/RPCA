@@ -1,0 +1,134 @@
+%{
+Step 2: Create Sets
+Joshua Beard
+4/1/17
+
+This is the second part of a series of scripts designed to illustrate the
+process for going through RPCA. It also serves to allow us to go through
+each step one at a time.
+%}
+%% Constant Parameters (to remain the same throughout the whole process)
+clear all; close all;
+
+% Global variable with folder name for input images from one year. Note that this
+% folder will include many subfolders corresponding to approximately a month
+% worth of images.
+global inputMainFolderName;
+% Global variable with folder name for results from processing images from
+% one year. Note that this folder will consist of subfolders corresponding
+% to folders where input images are stored (meaning, it has the same
+% structure as the input folder).
+global outputMainFolderName;
+% Max, min Set Size
+global maxSetSize;
+global minSetSize;
+
+pathPrefix = 'C:\ResearchData';        % Which drive you're using
+% The following are mutually exclusive
+pathSuffix = 'Madiyan_2012_Renamed';   % Which study you're analyzing
+%pathSuffix = 'Murghab_2012_Renamed';   %
+
+inputMainFolderName = pathJoin(pathPrefix, 'DATA\Tajikistan_2012_CTPhotos_Renamed', pathSuffix);
+outputMainFolderName = pathJoin(pathPrefix, 'RESULTS\Tajikistan_2012_CTPhotos_Renamed', pathSuffix);
+maxSetSize = 50;
+minSetSize = 2;
+
+% Name of setInfo text file (the product of CREATESETS)
+setInfoTextFileName = 'setInfo3.txt';
+
+%% Variable Parameters
+
+
+% ---------------------- Directly from Becker's code -------------------- %
+lambda                  = 2e-2;
+epsilon                 = 5e-3*norm(X,'fro'); % tolerance for fidelity to data
+tau0                    = 3e5;
+SPGL1_tolerance         = 1e-1;
+tolerance               = 1e-3;
+% Mutually exclusive, defines the optimization function for RPCA
+optimizationFunctionMax = true;
+optimizationFunctionSum = ~optimizationFunctionMax;
+
+% Group all parameters for simple passing
+RPCA_paramters = struct(   'lambda', lambda,...
+                            'epsilon', epsilon,...
+                            'tau0', tau0,...
+                            'SPGL1_tol', SPGL1_tolerance,...
+                            'tol', tolerance,...
+                            'sum', optimizationFunctionSum,...
+                            'max', optimizationFunctionMax);
+% ----------------------------------------------------------------------- %
+
+% Motion threshold for RPCA (corresponds with number of standard deviations
+% from mean at which to threshold; all pixels within (threshold*stdDev) of
+% mean become background, all outliers become foreground)
+% Future work: experiment more with this.
+motionThreshold = 1;
+
+% Structuring element for binary morphology to create template.
+% Future work: scale strel_size based on number of foreground pixels and
+% size of blobs
+strelSize = 100;
+strelShape = 'disk';
+%% Get folder list
+% create the above folder if it's not already there
+mkdir(outputMainFolderName);
+
+% Get list of folders, make folderList if DNE
+try
+    load(pathJoin(outputShareFolderName, 'folderList.mat'));
+catch
+    fprintf('folderList DNE. Getting folders now...\n');
+    [folderList, numFolders, emptyFolderList] = getFolders();
+    fprintf('DONE\n');
+end
+
+save(pathJoin(outputMainFolderName, 'folderList.mat'), 'folderList');
+save(pathJoin(outputMainFolderName, 'emptyFolderList.mat'), 'emptyFolderList');
+%% Create temporal sets
+
+% for each folder, create sets of images and process them accordingly
+for f = 1 : numFolders   
+    % get the name of the folder
+    folderName = folderList(f).name;
+     
+    % If setInfo3 has not been created, make it
+    if isempty(dir(pathJoin(outputMainFolderName, folderName, setInfoTextFileName)))
+        fprintf('\nCreating Sets\nFOLDER: %s\n(%d out of %d)\n', folderName, f, numFolders);
+        createSets(folderName); 
+        % Get and save setInfo struct for each setInfo.txt
+        setInfo = get_setInfo(pathJoin(outputMainFolderName, folderName));
+        save(pathJoin(outputMainFolderName, folderName, 'setInfo.mat'), 'setInfo' ,'-v7.3');
+    end
+end
+
+%% RPCA
+
+% Run robust principal component analysis
+for f = 1 : numFolders
+    directoryOfSets = dir(pathJoin(outputMainFolderName
+    for q = 1:length(directoryOfSets)
+    % Get the name of the folder
+    folderName = folderList(f).name;
+    
+    % Get image data
+    imageDataLocation = pathjoin(outputShareFolderName, folderName, directoryOfSets(q).name);
+    % let X be a DxN matrix representing a set of original images, where
+    %   D is imageHeight x imageWidth
+    %   N is number of images in a set
+    %   Each column in X represents one image
+    [X, imageHeight, imageWidth] = getImageData(imageDataLocation);
+    
+    % Run RPCA
+    rpca_results = run_RPCA(X, imageHeight, imageWidth, RPCA_parameters);
+    
+    % Motion threhsolding
+    rpca_results = threshold_RPCA(rpca_results, motionThreshold);
+    
+    % Binary morphology
+    rpca_results = morph_RPCA(rpca_results, strelSize, strelShape);
+   
+    % Save RPCA results
+    rpca_results_fileName = pathJoin(outputMainFolderName, folderName, setDir(q).name
+    save([outputMainFolderName folderName '\' directoryOfSets(q).name '\rpca_results.mat'], 'rpca_results', '-v7.3');
+            

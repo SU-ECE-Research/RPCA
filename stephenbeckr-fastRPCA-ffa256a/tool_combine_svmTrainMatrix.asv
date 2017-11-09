@@ -1,0 +1,24 @@
+% Combine svmTrainMatrix_firstHalf and svmTrainMatrix_lastHalf to make
+% svmTrainMatrix. This is to be called after driver_svmCalcs_firstHalf and
+% driver_svmCalcs_fistHalf
+%{
+Joshua Beard
+C: 2/3/17
+E: 2/3/17
+%}
+
+path = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Murghab_Concession\';
+
+svm_firstHalf = load([path 'svmTrainMatrix_firstHalf.mat']);
+svm_lastHalf = load([path 'svmTrainMatrix_lastHalf.mat']);
+prob_firstHalf = load([path 'rpca_results_problemSets_firstHalf.mat']);
+prob_lastHalf = load([path 'rpca_results_problemSets_lastHalf.mat']);
+imgs_firstHalf = load([path 'svmImageList.mat']);
+imgs_lastHalf = load([path 'svmImageList.mat']);
+
+%%
+svmFeatures = [svm_firstHalf.svmTrainMatrix; lastHalf.svmTrainMatrix];
+problemSets = [prob_firstHalf.rpca_results_problemSets; prob_lastHalf.rpca_results_problemSets];
+svmImageList = [imgs_lastHa
+save([path 'svmFeatures.mat'], 'svmFeatures');
+save([path 'problemSets.mat'], 'problemSets');

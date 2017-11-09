@@ -1,0 +1,39 @@
+%{
+tool_renameTemplatesForDemo0
+Taz Bales-Heisterkamp & Joshua Beard
+%}
+%% Parameters
+clear all; close all;
+templatePath = '\\ecefs1\ECE_Research-Space-Share\ECE 17.7\demo0\';
+templateSheetName = 'demoTemplates_2.xlsx';
+savePath = '\\ecefs1\ECE_Research-Space-Share\ECE 17.7\demo0\final\templates\';
+header = 1;
+selectedCol = 10;
+newNameCol = 8;
+%nameStart_col = 3;
+%nameEnd_col = 7;
+
+%% Work
+% Get excel data and the number of total images (inc. header)
+[~,~,xld] = xlsread([templatePath templateSheetName]);
+[nim_header, ~] = size(xld);
+
+for k = header+1:nim_header
+    if xld{k, selectedCol}
+        newName = xld{k, newNameCol} ;   % Get new name
+        
+        % Get old name
+        if isnan(xld{k,nameEnd_col})
+            oldName = [xld{k, 3} '=' xld{k, 4} '=' xld{k, 5} '=' xld{k, 6}];
+        else
+            oldName = [xld{k, 3} '=' xld{k, 4} '=' xld{k, 5} '=0' num2str)xld{k, 6}];
+        oldName = xld{k, nameStart_col};
+        for m = (nameStart_col + 1):nameEnd_col
+            if ~isnan(xld{k,m})
+                oldName = [oldName '=' num2str(xld{k, m})];
+            end
+        end
+        
+        copyfile([templatePath oldName], [savePath newName]);
+    end
+end

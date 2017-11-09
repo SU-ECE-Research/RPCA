@@ -1,0 +1,46 @@
+%delete_JPG_images
+
+%dataFolder = '\\ecefs1\ECE_Research-Space-Share\DATA\Tajikistan_2012_CTPhotos\Madiyan_Pshart\';
+dataFolder = '\\ecefs1\ECE_Research-Space-Share\DATA\Tajikistan_2012_CTPhotos\Murghab_Concession\';
+
+%resultsFolder = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Madiyan_Pshart\';
+resultsFolder = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Murghab_Concession\';
+
+%folderListName = 'folderList';
+folderListName = 'rpcaPriorityFolders';
+
+load([resultsFolder folderListName]);
+folderList = eval(folderListName);
+
+%%
+for q = 1:length(folderList)
+    
+    thisFolder = [resultsFolder folderList(q).name];
+    
+    % If setInfo struct doesn't exist, create and save one.
+    if isempty(dir([thisFolder '\setInfo.mat']))
+        fprintf('setInfo.mat does not exist at \n%s\nMaking and saving one now.\n', thisFolder);
+        setInfo = get_setInfo(thisFolder);
+        save([thisFolder '\setInfo.mat'], 'setInfo')
+    % If setInfo struct does exist, load it
+    else
+        load([thisFolder '\setInfo.mat']);
+    end
+    
+    numSets = length(setInfo);
+    
+    for k = 1:numSets
+        imgDir = dir([thisFolder '\Set_' num2str(k) '\*.JPG']);
+        
+        if isempty(imgDir) 
+            fprintf('no .JPGS at %s Set_%i', thisFolder, k);       
+        else
+            for m = 1:length(imgDir)
+                delete
+            end
+        end
+    end
+    
+    
+    
+end

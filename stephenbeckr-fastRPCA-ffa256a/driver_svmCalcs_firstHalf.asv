@@ -1,0 +1,186 @@
+% driver_svmCalcs_lastHalf
+% creates feature matrix for running svm (doesn't include the label column)
+
+% broken currently because of something with spotsInTemplate
+
+%{
+Author: Taz Bales-Heisterkamp
+Contributor: Joshua Beard
+C: 1/30/17
+E: 1/31/17
+    1/31/17 Broke because of corrupt rpca_results.mat file. Added TRY-CATCH
+            statements and error identifiers for each.
+            Also added BREAK in skipFlag clause to speed up execution. JB
+
+
+
+%}
+
+%% Parameters
+%clear all; close all;
+
+resultsPath_ATO = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Murghab_Concession\';
+resultsPath_MAD = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Madiyan_Pshart\';
+folderListName = 'svmEveryFolderList';
+type = 'every';
+spotsFolder = 'SpotsJosh\';
+%spotsFolder = 'SpotsAll\';
+
+% Skip these sets because RPCA hasn't been run (only one image)
+skipList = {};
+% SVM Training:
+
+skipList = {[resultsPath_ATO 'ATO06\P038\Set_197\'];...
+            [resultsPath_ATO 'ATO13\P022\Set_100\'];...
+            [resultsPath_ATO 'ATO18\P027\Set_44\'];...
+            [resultsPath_ATO 'ATO24\P040\Set_38\'];...
+            [resultsPath_ATO 'ATO37\P009\Set_55\'];...
+            [resultsPath_ATO 'ATO12\CAM41985\052912\Set_3\'];...
+            };
+
+%% Initialization
+% Get list of folders
+load([resultsPath_ATO folderListName]);
+folderList = eval(folderListName);
+
+% Index variable for total number of images/ num rows in the svm matrix
+totalRows = 0;
+
+% Keep track of problem sets and store their respective error identifiers
+numProblemSets = 0;
+rpca_results_problemSets = cell(numProblemSets,2);
+
+%currentFolder = 1;
+%currentSet = 1;
+currentFolder = newCurFolder;
+currentSet = newCurSet;
+imageList = cell(0);
+%% Processing
+% For each folder (first half only)
+for k = currentFolder:floor(length(folderList)/2)
+
+    % For each folder (work on last half)
+    %for k = floor(length(folderList)/2)+1:length(folderList)
+
+    % If it breaks, restart from where we were.
+    newCurFolder = k;
+    if k<currentFolder
+        continue
+    end
+    
+    % Get info from MAD if we need to
+    if strcmp(upper(folderList(k).name(1:3)), 'MAD')
+        thisFolder = [resultsPath_MAD folderList(k).name '\'];
+    else
+        thisFolder = [resultsPath_ATO folderList(k).name '\'];
+    end
+    
+    load([thisFolder 'setInfo.mat']);
+    
+    fprintf('Folder: %s at index %i of %i\n', thisFolder, k, length(folderList));
+    
+    % For each set
+    for s = 1:length(setInfo)
+        % If it breaks, restart from where we were.
+        newCurSet = s;
+        if k == currentFolder && s<currentSet
+            continue
+        end
+        
+        % Get file path to set
+        thisSet = [thisFolder 'Set_' num2str(s) '\'];
+        
+        % Figure out if we're skipping this set
+        skipFlag = false;
+        for q = 1:length(skipList)
+           if strcmp(thisSet, skipList{q})
+               skipFlag = true;
+               break; % JB 1/31/17
+           end
+        end
+        
+        % If we're not skipping
+        if ~skipFlag
+            
+            fprintf('Set %i of %i\n', s, length(setInfo));
+            % Get RPCA results
+            
+            %{
+            The following TRY-CATCH clause added by JB 1/31/17 to deal with
+            errors
+            %}
+            try         % Hopefully this works
+                load([thisSet 'rpca_results.mat']);
+            catch ME    % Loading threw an error
+                % Add another to the problem set, record its location and
+                % the error it threw.
+                numProblemSets = numProblemSets+1;
+                rpca_results_problemSets{numProblemSets,1} = thisSet;
+                rpca_results_problemSets{numProblemSets, 2} = ME.identifier;
+                rpca_results_problemSets{numProblemSets, 3} = ME.message;
+                continue;
+            end
+            
+
+            % Shrink RPCA results
+            oldSize = bytes(rpca_results);
+            rpca_results = shrink_rpca_results(rpca_results);
+            newSize = bytes(rpca_results);
+            if (newSize < oldSize)
+                save([thisSet 'rpca_results.mat'], 'rpca_results');
+            end
+            
+            % For each image
+            for i = 1:length(setInfo(s).names)
+                
+                % Increment our indexing var/ total image count
+                totalRows = totalRows + 1;
+                
+                try
+                    % Get template 
+                    template = rpca_reshape(rpca_results, 'M', i);
+                catch ME    % Loading threw an error
+                    % Add another to the problem set, record its location and
+                    % the error it threw.
+                    numProblemSets = numProblemSets+1;
+                    rpca_results_problemSets{numProblemSets,1} = thisSet;
+                    rpca_results_problemSets{numProblemSets, 2} = ME.identifier;
+                    rpca_results_problemSets{numProblemSets, 3} = ME.message;
+                    continue;
+                 end
+                
+                % Get image name
+                imageFileName = setInfo(s).names{i};
+                % Parse it to get rid of .JPG
+                imageName = strtok(imageFileName, '.');
+                try
+                    % Get BBOX
+                    load([thisFolder spotsFolder imageName '.mat']);
+                catch ME
+                    % Add another to the problem set, record its location and
+                    % the error it threw.
+                    numProblemSets = numProblemSets+1;
+                    rpca_results_problemSets{numProblemSets,1} = thisSet;
+                    rpca_results_problemSets{numProblemSets, 2} = ME.identifier;
+                    rpca_results_problemSets{numProblemSets, 3} = ME.message;
+                    continue;
+                 end
+                    
+                % Actually do the work lol
+                [temp(1), temp(2), temp(3), temp(4), temp(5)] = svmCalcs(template, BBOX);
+                features(totalRows, 1:5) = temp(:);
+                % [totalSpots, templateSpots, spotDensity, templateCoverage, avgSize]          
+                imageList{totalRows} = [thisFolder spotsFolder imageName];
+                
+            end
+            
+        end
+
+    end
+    
+end
+save([resultsPath_ATO type '_imageList_firstHalf.mat'], 'imageList');
+save([resultsPath_ATO type '_features_firstHalf.mat'], 'features');
+save([resultsPath_ATO type '_rpca_results_problemSets_firstHalf.mat'], 'rpca_results_problemSets');
+fprintf('There are %i total images in the list\n', totalRows);
+done;

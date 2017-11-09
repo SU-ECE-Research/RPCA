@@ -1,0 +1,66 @@
+%{
+tool_renameForDemo0
+Taz Bales-Heisterkamp
+C: 3/28/17
+E: 3/28/17
+%}
+
+%%
+clear all;
+atoPath = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Murghab_Concession\';
+madPath = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Madiyan_Pshart\';
+renamingTablesPath = '\\ecefs1\ECE_Research-Space-Share\ECE 17.7\Name Spreadsheets\';
+templatePath = '\\ecefs1\ECE_Research-Space-Share\ECE 17.7\demo0\';
+savePath = '\\ecefs1\ECE_Research-Space-Share\ECE 17.7\demo0\final\';
+
+templateFile = 'Copy of demoTemplates_2.xlsx';
+madTableFile = 'renaming.table.madiyan.2012.xlsx';
+atoTableFile = 'renaming.table.murghab.2012.xlsx';
+
+last_imgName_col = 7;
+selected_col = 10;
+mad_ato_col = 11;
+station_col = 12;
+camera_col = 13;
+
+%%
+% open template spreadsheet
+[~, ~, excelData] = xlsread([templatePath templateFile]);
+[nImgs_header, ~] = size(excelData);
+
+% open mad renaming sheet
+[~, ~, madSheet] = xlsread([renamingTablesPath madTableFile]);
+[madLength, ~] = size(madSheet);
+
+% open ato renaming sheet
+[~, ~, atoSheet] = xlsread([renamingTablesPath atoTableFile]);
+[atoLength, ~] = size(atoSheet);
+
+for k = 2:nImgs_header
+    if ~isnan(excelData{q, selected_col}) %if we're using that template
+        
+        % get station and camera 
+        station = excelData{q, station_col};
+        camera = excelData{q, station_col};
+        
+        % get image name
+        if isnan(excelData{q, last_imgName_col})
+            image_name = excelData{q, (last_imgName_col - 1)};
+        else
+            image_name = excelData{q, last_imgName_col};
+        end
+        
+        if excelData{q, mad_ato_col} == 1 % if it's in madiyan
+            for m = 2:madLength % step through renaming table
+                if (image_name == madSheet{m, 2} && station == madSheet{m, 3} && camera == madSheet{m, 4})
+                    new_name = madSheet{m, 8};
+                    
+                    break;
+                end
+            end
+        else % if it's in murghab
+            
+        end
+        
+    end
+end

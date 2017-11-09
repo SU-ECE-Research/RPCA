@@ -1,0 +1,59 @@
+function [totalSpots, templateSpots, spotDensity, templateCoverage, avgSize] = svmCalcs(image, detector,...
+                                                template);
+%{
+Inputs: 
+    - image: the original image
+    - detector: the initialized CascadeObjectDetector
+    - template: the black and white motion template after morphology
+                                                
+Outputs:
+    - totalSpots: total number of spots detected in the image
+    - templateSpots: number of spots which overlap with the template
+    - spotDensity: number of spots divided by the number of white pixels 
+        in the template
+    - templateCoverage: ratio of the white pixels in the image to total
+        image size
+    - avgSize: average size of spots on t
+                                               
+
+Author: Taz Bales-Heisterkamp
+C: 1/30/17
+E: 1/30/17
+%}
+
+if nargin < 3
+    template = ones(r,c);
+end
+
+%% Work
+
+% Detect spots
+BBOX = step(detector, image);
+% Count total spots
+[totalSpots, ~] = size(BBOX);
+
+% Find the spots in the template and count them
+BBOX_prime = spotsInTemplate(BBOX, template, 3);
+[templateSpots, ~] = size(BBOX_prime);
+
+% Find number of white pixels in the template (motion)
+whitePixels = sum(sum(template));
+% Find total number of pixels in the image
+totalPixels = numel(image);
+
+% Calculate spot density
+spotDensity = templateSpots/whitePixels;
+
+% Calculate amount of the image that is motion
+templateCoverage = whitePixels/totalPixels;
+
+% Calculate the average size of the spots on the template compared to
+% total image size
+widths = BBOX_prime(:,3);
+heights = BBOX_prime(:,4);
+areas = widths.*heights;
+temp_size = sum(areas)/templateSpots;
+
+% Normalize it to image size
+avgSize
+

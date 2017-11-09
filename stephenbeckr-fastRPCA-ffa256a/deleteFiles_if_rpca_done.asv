@@ -1,0 +1,50 @@
+% deleteFiles_if_rpca_done
+% deletes all files of type fileTypeToDelete in folderList to free up space
+% in the share drive (only deletes if RPCA has been completed)
+% TBH and JB 
+% C: 1/29/17
+% E: 
+
+%resultsFolder = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Madiyan_Pshart\';
+resultsFolder = '\\ecefs1\ECE_Research-Space-Share\RESULTS\Tajikistan_2012_CTPhotos\Murghab_Concession\';
+
+folderListName = 'folderList';
+%folderListName = 'rpcaPriorityFolders';
+
+load([resultsFolder folderListName]);
+folderList = eval(folderListName);
+%fileTypeToDelete = 'bmp'
+fileTypeToDelete = 'JPG';
+
+%%
+totalDelFiles = 0;
+for q = 1:length(folderList);
+    
+    thisFolder = [resultsFolder folderList(q).name];
+    
+    % If setInfo struct doesn't exist, create and save one.
+    if isempty(dir([thisFolder '\setInfo.mat']))
+        fprintf('setInfo.mat does not exist at \n%s\nMaking and saving one now.\n', thisFolder);
+        setInfo = get_setInfo(thisFolder);
+        save([thisFolder '\setInfo.mat'], 'setInfo')
+    % If setInfo struct does exist, load it
+    else
+        load([thisFolder '\setInfo.mat']);
+    end
+    
+    numSets = length(setInfo);
+    fprintf('deleting %s at index %i, file %s \n', fileTypeToDelete, q, folderList(q).name);
+     
+    for k = 1:numSets
+        thisSet = [thisFolder '\Set_' num2str(k) '\'];
+        
+        % If rpca_results doesn't exist, don't delete images
+        if ~isempty(dir([thisSet 'rpca_results.mat']));
+            numDelFiles = deleteFileType(thisSet, fileTypeToDelete);
+            totalDelFiles = totalDelFiles + numDelFiles;
+        end
+    end
+    
+    
+end
+fprintf('Deleted %d files',totalDelFiles);
